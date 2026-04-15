@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Clipboard Sync</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    textarea { width: 100%; height: 300px; font-size: 16px; }
+    .status { margin-bottom: 10px; color: green; }
+  </style>
+</head>
+
+<body>
+  <h2>Clipboard Sync 🚀</h2>
+  <div class="status" id="status">Connecting...</div>
+
+  <button onclick="enableSync()">SYNC CLIPBOARD</button>
+  <textarea id="text" placeholder="Scrivi qui..."></textarea>
+
+  <script>
+	const protocol = location.protocol === "https:" ? "wss" : "ws";
+	const ws = new WebSocket(protocol + "://" + location.host + "/ws");
+
+	const textArea = document.getElementById("text");
+	const status = document.getElementById("status");
+
+	let lastSent = "";
+	let syncEnabled = false;
+
+	ws.onopen = () => {
+	  status.innerText = "Connected ✔️";
+	};
+
+	function send(text) {
+	  lastSent = text;
+	  ws.send(text);
+	}
+
+	// 🔥 CLICK TO ENABLE SYNC
+	async function enableSync() {
+	  syncEnabled = true;
+	  status.innerText = "SYNC ACTIVE 🔥";
+
+	  // primo read immediato
+	  readClipboard();
+	}
+
+	// 🔥 LEGGE CLIPBOARD (solo dopo click)
+	async function readClipboard() {
+	  if (!syncEnabled) return;
+
+	  try {
+	    const text = await navigator.clipboard.readText();
+
+	    if (text && text !== lastSent) {
+	      textArea.value = text;
+	      send(text);
+	    }
+	  } catch (e) {
+	    console.log("clipboard blocked");
+	  }
+	}
+
+	// polling ogni 1 secondo
+	setInterval(readClipboard, 1000);
+
+	// manual typing
+	textArea.addEventListener("input", () => {
+	  send(textArea.value);
+	});
+
+	// receive
+	ws.onmessage = (event) => {
+	  if (event.data !== lastSent) {
+	    textArea.value = event.data;
+	  }
+	};
+  </script>
+</body>
+</html>
